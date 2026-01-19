@@ -31,6 +31,9 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL ||
       'https://mainhushivam-jarvis-api.hf.space',
+    NEXT_PUBLIC_WS_URL:
+      process.env.NEXT_PUBLIC_WS_URL ||
+      'wss://mainhushivam-jarvis-api.hf.space',
   },
 };
 
