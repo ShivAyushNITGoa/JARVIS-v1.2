@@ -1,7 +1,7 @@
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  'https://mainhushivam-jarvis-api.hf.space';
+  'https://mainhushivam-jarvis-v1-2.hf.space';
 
 const request = async (path, options = {}) => {
   const response = await fetch(`${API_URL}${path}`, {

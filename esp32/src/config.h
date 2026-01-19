@@ -26,8 +26,8 @@
 // For local testing:
 // #define JARVIS_SERVER "http://192.168.1.100:8000"
 
-#define JARVIS_SERVER "https://mainhushivam-jarvis-api.hf.space"
-#define JARVIS_WS_SERVER "wss://mainhushivam-jarvis-api.hf.space/ws/esp32"
+#define JARVIS_SERVER "https://mainhushivam-jarvis-v1-2.hf.space"
+#define JARVIS_WS_SERVER "wss://mainhushivam-jarvis-v1-2.hf.space/ws/esp32"
 
 // API endpoints
 #define API_CHAT "/api/chat"
