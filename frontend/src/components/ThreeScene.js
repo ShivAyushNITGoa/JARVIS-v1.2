@@ -1,11 +1,14 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Sphere, Ring, Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import { useJarvisStore } from '../lib/store';
 import { jarvisAPI } from '../lib/api';
+
+// Fix ReactCurrentOwner issue by ensuring React is imported
+import React from 'react';
 
 // Particle System
 function Particles({ count = 1000 }) {
