@@ -87,6 +87,7 @@ export default function Home() {
   // Initialize
   useEffect(() => {
     let mounted = true;
+    let hasGreeted = false;
 
     const fetchStatus = async () => {
       const data = await jarvisAPI.getStatus();
@@ -96,8 +97,9 @@ export default function Home() {
       setServerStatus(statusValue);
       setServerVersion(data.version || null);
 
-      if (statusValue === 'online') {
+      if (statusValue === 'online' && !hasGreeted) {
         addMessage('jarvis', 'Good day! JARVIS online and ready. All systems operational.');
+        hasGreeted = true;
       }
     };
 
