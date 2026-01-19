@@ -193,6 +193,17 @@ export const jarvisAPI = {
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation settings error:', error);
+      // Return default settings if endpoint not found
+      if (error.message.includes('Not Found') || error.message.includes('404')) {
+        return { 
+          success: true, 
+          settings: {
+            gesture_mappings: {},
+            pose_mappings: {},
+            cooldowns: { default: 4000 }
+          }
+        };
+      }
       return { success: false, error: error.message };
     }
   },
@@ -217,6 +228,14 @@ export const jarvisAPI = {
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation timeline error:', error);
+      // Return empty timeline if endpoint not found
+      if (error.message.includes('Not Found') || error.message.includes('404')) {
+        return { 
+          success: true, 
+          events: [],
+          total: 0
+        };
+      }
       return { success: false, error: error.message };
     }
   },
