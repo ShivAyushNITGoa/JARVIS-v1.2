@@ -3,23 +3,23 @@
 import { useState, useEffect } from 'react';
 
 import dynamic from 'next/dynamic';
-import JarvisCore from '@/components/JarvisCore';
-import VoiceInterface from '@/components/VoiceInterface';
-import ChatInterface from '@/components/ChatInterface';
-import DevicePanel from '@/components/DevicePanel';
-import FaceRecognition from '@/components/FaceRecognition';
-import GestureControl from '@/components/GestureControl';
-import PoseDetection from '@/components/PoseDetection';
-import DashboardPanel from '@/components/DashboardPanel';
-import SearchWeatherPanel from '@/components/SearchWeatherPanel';
-import MemoryPanel from '@/components/MemoryPanel';
-import ControlStudioPanel from '@/components/ControlStudioPanel';
+import JarvisCore from '../components/JarvisCore';
+import VoiceInterface from '../components/VoiceInterface';
+import ChatInterface from '../components/ChatInterface';
+import DevicePanel from '../components/DevicePanel';
+import FaceRecognition from '../components/FaceRecognition';
+import GestureControl from '../components/GestureControl';
+import PoseDetection from '../components/PoseDetection';
+import DashboardPanel from '../components/DashboardPanel';
+import SearchWeatherPanel from '../components/SearchWeatherPanel';
+import MemoryPanel from '../components/MemoryPanel';
+import ControlStudioPanel from '../components/ControlStudioPanel';
 
-import { useJarvisStore } from '@/lib/store';
-import { jarvisAPI } from '@/lib/api';
+import { useJarvisStore } from '../lib/store';
+import { jarvisAPI } from '../lib/api';
 
 // Dynamic import for Three.js (no SSR)
-const ThreeScene = dynamic(() => import('@/components/ThreeScene'), {
+const ThreeScene = dynamic(() => import('../components/ThreeScene'), {
   ssr: false,
   loading: () => <div className="w-full h-full flex items-center justify-center">Loading 3D...</div>
 });
