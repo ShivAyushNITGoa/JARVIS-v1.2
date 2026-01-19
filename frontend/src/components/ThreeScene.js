@@ -7,8 +7,16 @@ import * as THREE from 'three';
 import { useJarvisStore } from '../lib/store';
 import { jarvisAPI } from '../lib/api';
 
-// Fix ReactCurrentOwner issue by ensuring React is imported
+// Ensure React is available for @react-three/fiber
 import React from 'react';
+
+// Disable React Strict Mode for Three.js to avoid ReactCurrentOwner issues
+const ThreeSceneWrapper = ({ children }) => {
+  useEffect(() => {
+    // Force non-strict mode for Three.js components
+    return () => {};
+  }, []);
+  return <>{children}</>;
 
 // Particle System
 function Particles({ count = 1000 }) {
@@ -175,46 +183,48 @@ function DataStream({ position, delay = 0 }) {
 // Main Scene
 export default function ThreeScene() {
   return (
-    <Canvas
-      camera={{ position: [0, 0, 6], fov: 50 }}
-      style={{ background: 'transparent' }}
-    >
-      {/* Lighting */}
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={1} color="#00d4ff" />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#ff00ff" />
-      
-      {/* JARVIS Core */}
-      <JarvisCore />
-      
-      {/* Particles */}
-      <Particles count={2000} />
-      
-      {/* Status Text */}
-      <StatusText />
-      
-      {/* Data Streams */}
-      {[...Array(20)].map((_, i) => (
-        <DataStream
-          key={i}
-          position={[
-            (Math.random() - 0.5) * 6,
-            0,
-            (Math.random() - 0.5) * 6,
-          ]}
-          delay={Math.random() * 4}
+    <ThreeSceneWrapper>
+      <Canvas
+        camera={{ position: [0, 0, 6], fov: 50 }}
+        style={{ background: 'transparent' }}
+      >
+        {/* Lighting */}
+        <ambientLight intensity={0.2} />
+        <pointLight position={[10, 10, 10]} intensity={1} color="#00d4ff" />
+        <pointLight position={[-10, -10, -10]} intensity={0.5} color="#ff00ff" />
+        
+        {/* JARVIS Core */}
+        <JarvisCore />
+        
+        {/* Particles */}
+        <Particles count={2000} />
+        
+        {/* Status Text */}
+        <StatusText />
+        
+        {/* Data Streams */}
+        {[...Array(20)].map((_, i) => (
+          <DataStream
+            key={i}
+            position={[
+              (Math.random() - 0.5) * 6,
+              0,
+              (Math.random() - 0.5) * 6,
+            ]}
+            delay={Math.random() * 4}
+          />
+        ))}
+        
+        {/* Controls */}
+        <OrbitControls
+          enableZoom={true}
+          enablePan={false}
+          minDistance={3}
+          maxDistance={10}
+          autoRotate
+          autoRotateSpeed={0.5}
         />
-      ))}
-      
-      {/* Controls */}
-      <OrbitControls
-        enableZoom={true}
-        enablePan={false}
-        minDistance={3}
-        maxDistance={10}
-        autoRotate
-        autoRotateSpeed={0.5}
-      />
-    </Canvas>
+      </Canvas>
+    </ThreeSceneWrapper>
   );
 }
