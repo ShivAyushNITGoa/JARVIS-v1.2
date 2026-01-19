@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useJarvisStore } from '@/lib/store';
-import { jarvisAPI } from '@/lib/api';
+import { useJarvisStore } from '../lib/store';
+import { jarvisAPI } from '../lib/api';
 
 const GESTURES = {
   'Closed_Fist': { action: 'toggle_light', label: 'Toggle Light' },

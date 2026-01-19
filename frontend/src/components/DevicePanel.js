@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useJarvisStore } from '@/lib/store';
-import { jarvisAPI } from '@/lib/api';
+import { useJarvisStore } from '../lib/store';
+import { jarvisAPI } from '../lib/api';
 
 const DEVICE_ICONS = {
   light_living: '💡',

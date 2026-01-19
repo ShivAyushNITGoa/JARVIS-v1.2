@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useJarvisStore } from '@/lib/store';
-import { jarvisAPI } from '@/lib/api';
+import { useJarvisStore } from '../lib/store';
+import { jarvisAPI } from '../lib/api';
 
 export default function ChatInterface() {
   const [input, setInput] = useState('');

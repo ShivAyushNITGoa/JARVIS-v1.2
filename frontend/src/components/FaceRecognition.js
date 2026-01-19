@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useJarvisStore } from '@/lib/store';
+import { useJarvisStore } from '../lib/store';
 
 export default function FaceRecognition() {
   const videoRef = useRef(null);

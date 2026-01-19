@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { jarvisAPI } from '@/lib/api';
+import { useJarvisStore } from '../lib/store';
+import { jarvisAPI } from '../lib/api';
 
 export default function SearchWeatherPanel() {
   const [query, setQuery] = useState('');

@@ -4,7 +4,8 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Sphere, Ring, Text, Float } from '@react-three/drei';
 import * as THREE from 'three';
-import { useJarvisStore } from '@/lib/store';
+import { useJarvisStore } from '../lib/store';
+import { jarvisAPI } from '../lib/api';
 
 // Particle System
 function Particles({ count = 1000 }) {
