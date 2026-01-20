@@ -3,11 +3,12 @@ const API_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   'https://mainhushivam-jarvis-v1-2.hf.space';
 
-const request = async (path, options = {}) => {
+const request = async (path, options = {}, token) => {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });
@@ -55,13 +56,13 @@ export const jarvisAPI = {
     }
   },
 
-  async chat(message, context = {}) {
+  async chat(message, context = {}, token) {
     try {
       const userId = context.user_id || 'default';
       const data = await request('/api/chat', {
         method: 'POST',
         body: JSON.stringify({ message, user_id: userId }),
-      });
+      }, token);
 
       return { success: true, ...data };
     } catch (error) {
@@ -70,7 +71,7 @@ export const jarvisAPI = {
     }
   },
 
-  async controlDevice(device, action, value = null) {
+  async controlDevice(device, action, value = null, token) {
     try {
       const payload = { device, action };
       if (value !== null && value !== undefined) {
@@ -80,7 +81,7 @@ export const jarvisAPI = {
       const data = await request('/api/devices/control', {
         method: 'POST',
         body: JSON.stringify(payload),
-      });
+      }, token);
 
       return { success: Boolean(data?.success), ...data };
     } catch (error) {
@@ -89,9 +90,9 @@ export const jarvisAPI = {
     }
   },
 
-  async getDeviceStatus() {
+  async getDeviceStatus(token) {
     try {
-      const data = await request('/api/devices/status');
+      const data = await request('/api/devices/status', {}, token);
       return {
         success: true,
         devices: {
@@ -107,12 +108,12 @@ export const jarvisAPI = {
     }
   },
 
-  async sendSensorData(sensorData) {
+  async sendSensorData(sensorData, token) {
     try {
       const data = await request('/api/devices/sensors', {
         method: 'POST',
         body: JSON.stringify(sensorData),
-      });
+      }, token);
 
       return { success: true, ...data };
     } catch (error) {
@@ -121,10 +122,10 @@ export const jarvisAPI = {
     }
   },
 
-  async search(query) {
+  async search(query, token) {
     try {
       const params = new URLSearchParams({ q: query, max_results: '5' });
-      const data = await request(`/api/search?${params.toString()}`);
+      const data = await request(`/api/search?${params.toString()}`, {}, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Search error:', error);
@@ -132,10 +133,10 @@ export const jarvisAPI = {
     }
   },
 
-  async getWeather(location = '') {
+  async getWeather(location = '', token) {
     try {
       const params = new URLSearchParams({ location });
-      const data = await request(`/api/weather?${params.toString()}`);
+      const data = await request(`/api/weather?${params.toString()}`, {}, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Weather error:', error);
@@ -143,10 +144,10 @@ export const jarvisAPI = {
     }
   },
 
-  async getMemory(userId = 'default', limit = 20) {
+  async getMemory(userId = 'default', limit = 20, token) {
     try {
       const params = new URLSearchParams({ limit: String(limit) });
-      const data = await request(`/api/memory/${userId}?${params.toString()}`);
+      const data = await request(`/api/memory/${userId}?${params.toString()}`, {}, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Memory error:', error);
@@ -154,9 +155,9 @@ export const jarvisAPI = {
     }
   },
 
-  async clearMemory(userId = 'default') {
+  async clearMemory(userId = 'default', token) {
     try {
-      const data = await request(`/api/memory/${userId}`, { method: 'DELETE' });
+      const data = await request(`/api/memory/${userId}`, { method: 'DELETE' }, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Clear memory error:', error);
@@ -164,7 +165,7 @@ export const jarvisAPI = {
     }
   },
 
-  async analyzeFile(file) {
+  async analyzeFile(file, token) {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -172,6 +173,9 @@ export const jarvisAPI = {
       const response = await fetch(`${API_URL}/api/files/analyze`, {
         method: 'POST',
         body: formData,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
 
       if (!response.ok) {
@@ -187,9 +191,9 @@ export const jarvisAPI = {
     }
   },
 
-  async getAutomationSettings() {
+  async getAutomationSettings(token) {
     try {
-      const data = await request('/api/automation/settings');
+      const data = await request('/api/automation/settings', {}, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation settings error:', error);
@@ -208,12 +212,12 @@ export const jarvisAPI = {
     }
   },
 
-  async updateAutomationSettings(payload) {
+  async updateAutomationSettings(payload, token) {
     try {
       const data = await request('/api/automation/settings', {
         method: 'POST',
         body: JSON.stringify(payload),
-      });
+      }, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation update error:', error);
@@ -221,10 +225,10 @@ export const jarvisAPI = {
     }
   },
 
-  async getAutomationTimeline(limit = 50) {
+  async getAutomationTimeline(limit = 50, token) {
     try {
       const params = new URLSearchParams({ limit: String(limit) });
-      const data = await request(`/api/automation/timeline?${params.toString()}`);
+      const data = await request(`/api/automation/timeline?${params.toString()}`, {}, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation timeline error:', error);
@@ -240,12 +244,12 @@ export const jarvisAPI = {
     }
   },
 
-  async logAutomationEvent(event) {
+  async logAutomationEvent(event, token) {
     try {
       const data = await request('/api/automation/timeline', {
         method: 'POST',
         body: JSON.stringify(event),
-      });
+      }, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation event error:', error);
@@ -253,9 +257,9 @@ export const jarvisAPI = {
     }
   },
 
-  async clearAutomationTimeline() {
+  async clearAutomationTimeline(token) {
     try {
-      const data = await request('/api/automation/timeline', { method: 'DELETE' });
+      const data = await request('/api/automation/timeline', { method: 'DELETE' }, token);
       return { success: true, ...data };
     } catch (error) {
       console.error('Automation timeline clear error:', error);

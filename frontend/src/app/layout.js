@@ -1,4 +1,5 @@
 import './globals.css';
+import { AuthProvider } from '../contexts/AuthContext';
 
 export const metadata = {
   title: 'JARVIS - Advanced AI Assistant',
@@ -24,7 +25,9 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#00d4ff" />
       </head>
       <body className="bg-jarvis-dark text-white antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `

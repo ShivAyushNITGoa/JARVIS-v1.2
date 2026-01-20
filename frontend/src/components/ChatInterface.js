@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useJarvisStore } from '../lib/store';
 import { jarvisAPI } from '../lib/api';
 
-export default function ChatInterface() {
+export default function ChatInterface({ authToken = null }) {
   const [input, setInput] = useState('');
   const [attachment, setAttachment] = useState(null);
   const [attachmentStatus, setAttachmentStatus] = useState('idle');
@@ -114,7 +114,7 @@ export default function ChatInterface() {
     }
 
     try {
-      const response = await jarvisAPI.chat(payloadMessage);
+      const response = await jarvisAPI.chat(payloadMessage, authToken);
 
       if (response.success) {
         addMessage('jarvis', response.response);

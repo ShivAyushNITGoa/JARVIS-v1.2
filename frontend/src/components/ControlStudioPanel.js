@@ -24,7 +24,7 @@ const ACTION_OPTIONS = [
   { value: 'off', label: 'Off' },
 ];
 
-export default function ControlStudioPanel({ isActive = false }) {
+export default function ControlStudioPanel({ isActive = false, authToken = null }) {
   const {
     attachmentHistory,
     clearAttachmentHistory,
@@ -41,6 +41,10 @@ export default function ControlStudioPanel({ isActive = false }) {
     setActivityTimeline,
     clearActivityTimeline,
     devices,
+    visionSettings,
+    setVisionSetting,
+    hologramSettings,
+    setHologramSetting,
   } = useJarvisStore();
 
   const [syncState, setSyncState] = useState('idle');
@@ -74,7 +78,7 @@ export default function ControlStudioPanel({ isActive = false }) {
   const persistSettings = async (nextSettings) => {
     setSyncState('saving');
     setSyncError(null);
-    const response = await jarvisAPI.updateAutomationSettings(nextSettings);
+    const response = await jarvisAPI.updateAutomationSettings(nextSettings, authToken);
     if (!response.success) {
       setSyncError(response.error || 'Sync failed.');
     }
@@ -119,7 +123,7 @@ export default function ControlStudioPanel({ isActive = false }) {
   };
 
   const handleClearTimeline = async () => {
-    await jarvisAPI.clearAutomationTimeline();
+    await jarvisAPI.clearAutomationTimeline(authToken);
     clearActivityTimeline();
   };
 
@@ -183,7 +187,7 @@ export default function ControlStudioPanel({ isActive = false }) {
         gesture_mappings: nextGesture,
         pose_mappings: nextPose,
         cooldowns: nextCooldowns,
-      });
+      }, authToken);
       if (!response.success) {
         setImportError(response.error || 'Import rejected by server.');
       }
@@ -318,6 +322,164 @@ export default function ControlStudioPanel({ isActive = false }) {
       </div>
 
       <div className="lg:col-span-2 space-y-6">
+        <div className="glass p-6 rounded-2xl panel-card">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="panel-kicker">Calibration</p>
+              <h3 className="panel-title">Vision & Hologram Tuning</h3>
+              <p className="panel-subtitle">Adjust smoothing, thresholds, and hologram responsiveness.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Smoothing Window</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={visionSettings.smoothingWindow}
+                  onChange={(e) => setVisionSetting('smoothingWindow', Math.max(1, Number(e.target.value) || 1))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Confidence Threshold</span>
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1"
+                  value={visionSettings.confidenceThreshold}
+                  onChange={(e) => setVisionSetting('confidenceThreshold', Math.min(1, Math.max(0, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Pinch Threshold</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.05"
+                  max="0.6"
+                  value={visionSettings.pinchThreshold}
+                  onChange={(e) => setVisionSetting('pinchThreshold', Math.min(0.6, Math.max(0.05, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Swipe Threshold (px)</span>
+                <input
+                  type="number"
+                  step="5"
+                  min="20"
+                  max="200"
+                  value={visionSettings.swipeThreshold}
+                  onChange={(e) => setVisionSetting('swipeThreshold', Math.min(200, Math.max(20, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Rotate Threshold (rad)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.05"
+                  max="1"
+                  value={visionSettings.rotateThreshold}
+                  onChange={(e) => setVisionSetting('rotateThreshold', Math.min(1, Math.max(0.05, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Zoom Threshold</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.05"
+                  max="0.5"
+                  value={visionSettings.zoomThreshold}
+                  onChange={(e) => setVisionSetting('zoomThreshold', Math.min(0.5, Math.max(0.05, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Min Zoom</span>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="2"
+                  max={hologramSettings.maxZoom}
+                  value={hologramSettings.minZoom}
+                  onChange={(e) => setHologramSetting('minZoom', Math.max(2, Number(e.target.value) || 2))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Max Zoom</span>
+                <input
+                  type="number"
+                  step="0.5"
+                  min={hologramSettings.minZoom}
+                  max="20"
+                  value={hologramSettings.maxZoom}
+                  onChange={(e) => setHologramSetting('maxZoom', Math.max(hologramSettings.minZoom, Number(e.target.value) || hologramSettings.minZoom))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Base Zoom</span>
+                <input
+                  type="number"
+                  step="0.5"
+                  min={hologramSettings.minZoom}
+                  max={hologramSettings.maxZoom}
+                  value={hologramSettings.baseZoom}
+                  onChange={(e) => setHologramSetting('baseZoom', Math.max(hologramSettings.minZoom, Math.min(hologramSettings.maxZoom, Number(e.target.value) || hologramSettings.baseZoom)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Auto-Rotate</span>
+                <input
+                  type="checkbox"
+                  checked={hologramSettings.autoRotate}
+                  onChange={(e) => setHologramSetting('autoRotate', e.target.checked)}
+                  className="w-5 h-5"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Auto-Rotate Speed</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  max="0.05"
+                  value={hologramSettings.autoRotateSpeed}
+                  onChange={(e) => setHologramSetting('autoRotateSpeed', Math.min(0.05, Math.max(0, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+              <div className="flex items-center justify-between text-sm text-white/70">
+                <span>Pulse Intensity</span>
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max="1.5"
+                  value={hologramSettings.pulseIntensity}
+                  onChange={(e) => setHologramSetting('pulseIntensity', Math.min(1.5, Math.max(0, Number(e.target.value) || 0)))}
+                  className="mapping-input w-24"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="glass p-6 rounded-2xl panel-card">
           <div className="flex items-start justify-between">
             <div>

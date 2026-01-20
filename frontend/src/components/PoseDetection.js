@@ -39,7 +39,15 @@ export default function PoseDetection() {
     poseMappings,
     cooldowns,
     addActivityEvent,
+    visionSettings,
+    setVisionSetting,
   } = useJarvisStore();
+
+  const visionRef = useRef(visionSettings);
+
+  useEffect(() => {
+    visionRef.current = visionSettings;
+  }, [visionSettings]);
 
   const getCooldown = (pose) => {
     const poseCooldowns = cooldowns?.pose || {};
@@ -148,7 +156,7 @@ export default function PoseDetection() {
     return () => cancelAnimationFrame(animationId);
   }, [isActive, detector, setPoseData]);
 
-  const isConfident = (point) => point && (point.score ?? 1) >= 0.3;
+  const isConfident = (point) => point && (point.score ?? 1) >= (visionRef.current.poseConfidence ?? 0.3);
 
   const evaluatePoseAction = (pose) => {
     const { keypoints } = pose;
@@ -168,6 +176,7 @@ export default function PoseDetection() {
     const wristsAboveShoulders =
       leftWrist.y < leftShoulder.y && rightWrist.y < rightShoulder.y;
     const wristsBelowHips = leftWrist.y > leftHip.y && rightWrist.y > rightHip.y;
+    const armsWide = Math.abs(leftWrist.x - rightWrist.x) > (visionRef.current.poseArmsWidePx ?? 300);
 
     if (wristsAboveShoulders) {
       return 'hands_up';
@@ -177,8 +186,41 @@ export default function PoseDetection() {
       return 'hands_down';
     }
 
+    if (armsWide) {
+      return 'arms_out';
+    }
+
     return null;
   };
+
+  const PoseCalibration = () => (
+    <div className="space-y-3 mt-4">
+      <div className="flex items-center justify-between text-sm text-white/70">
+        <span>Pose Confidence</span>
+        <input
+          type="number"
+          step="0.05"
+          min="0.1"
+          max="0.9"
+          value={visionSettings.poseConfidence ?? 0.3}
+          onChange={(e) => setVisionSetting('poseConfidence', Math.min(0.9, Math.max(0.1, Number(e.target.value) || 0.3)))}
+          className="mapping-input w-24"
+        />
+      </div>
+      <div className="flex items-center justify-between text-sm text-white/70">
+        <span>Arms Wide (px)</span>
+        <input
+          type="number"
+          step="10"
+          min="100"
+          max="800"
+          value={visionSettings.poseArmsWidePx ?? 300}
+          onChange={(e) => setVisionSetting('poseArmsWidePx', Math.min(800, Math.max(100, Number(e.target.value) || 300)))}
+          className="mapping-input w-24"
+        />
+      </div>
+    </div>
+  );
 
   const applyDeviceAction = async (deviceId, action) => {
     if (!deviceId) return;
@@ -278,6 +320,8 @@ export default function PoseDetection() {
           </div>
         )}
       </div>
+
+      <PoseCalibration />
     </div>
   );
 }

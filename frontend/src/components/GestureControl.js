@@ -5,18 +5,27 @@ import { useJarvisStore } from '../lib/store';
 import { jarvisAPI } from '../lib/api';
 
 const GESTURES = {
-  'Closed_Fist': { action: 'toggle_light', label: 'Toggle Light' },
-  'Open_Palm': { action: 'stop', label: 'Stop' },
-  'Pointing_Up': { action: 'volume_up', label: 'Volume Up' },
-  'Thumb_Up': { action: 'confirm', label: 'Confirm' },
-  'Thumb_Down': { action: 'cancel', label: 'Cancel' },
-  'Victory': { action: 'toggle_fan', label: 'Toggle Fan' },
+  Closed_Fist: { action: 'toggle_light', label: 'Closed Fist' },
+  Open_Palm: { action: 'stop', label: 'Open Palm' },
+  Pointing_Up: { action: 'volume_up', label: 'Pointing Up' },
+  Thumb_Up: { action: 'confirm', label: 'Thumb Up' },
+  Thumb_Down: { action: 'cancel', label: 'Thumb Down' },
+  Victory: { action: 'toggle_fan', label: 'Victory' },
+  Pinch: { action: 'pulse', label: 'Pinch' },
+  Swipe_Left: { action: 'swipe_left', label: 'Swipe Left' },
+  Swipe_Right: { action: 'swipe_right', label: 'Swipe Right' },
+  Rotate_CW: { action: 'rotate_cw', label: 'Rotate CW' },
+  Rotate_CCW: { action: 'rotate_ccw', label: 'Rotate CCW' },
+  Zoom_In: { action: 'zoom_in', label: 'Zoom In' },
+  Zoom_Out: { action: 'zoom_out', label: 'Zoom Out' },
 };
 
 const buildActionLabel = (gesture, mapping) => {
   const label = GESTURES[gesture]?.label || gesture;
-  if (!mapping) return label;
-  const deviceLabel = mapping.device.replace(/_/g, ' ');
+  if (!mapping || mapping.action === 'none') return label;
+  const deviceLabel = mapping.device === 'all'
+    ? 'all devices'
+    : mapping.device.replace(/_/g, ' ');
   return `${label}: ${deviceLabel} ${mapping.action}`;
 };
 
@@ -29,15 +38,28 @@ export default function GestureControl() {
   const [lastActionLabel, setLastActionLabel] = useState(null);
   const lastGestureRef = useRef(null);
   const lastActionRef = useRef(0);
+  const gestureHistoryRef = useRef([]);
+  const lastWristRef = useRef(null);
+  const lastAngleRef = useRef(null);
+  const lastTwoHandDistanceRef = useRef(null);
+  const transientGestureRef = useRef(null);
 
-  const { 
-    setGestureDetected, 
-    devices, 
-    updateDevice, 
-    gestureMappings, 
-    cooldowns, 
-    addActivityEvent 
+  const {
+    setGestureDetected,
+    devices,
+    updateDevice,
+    gestureMappings,
+    cooldowns,
+    addActivityEvent,
+    visionSettings,
+    setHologramControl,
   } = useJarvisStore();
+
+  const settingsRef = useRef(visionSettings);
+
+  useEffect(() => {
+    settingsRef.current = visionSettings;
+  }, [visionSettings]);
 
   const getCooldown = (gesture) => {
     const gestureCooldowns = cooldowns?.gesture || {};
@@ -72,7 +94,7 @@ export default function GestureControl() {
     }
 
     const mapping = gestureMappings?.[gesture];
-    if (!mapping) return;
+    if (!mapping || mapping.action === 'none') return;
 
     await applyDeviceAction(mapping.device, mapping.action);
     lastActionRef.current = now;
@@ -132,6 +154,225 @@ export default function GestureControl() {
     setCurrentGesture(null);
     setGestureDetected(null);
     setLastActionLabel(null);
+    setHologramControl({
+      rotateDelta: 0,
+      zoomDelta: 0,
+      pulse: 0,
+      activeGesture: null,
+      confidence: 0,
+    });
+  };
+
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  const getHandSize = (keypoints) => distance(keypoints[0], keypoints[9]) || 1;
+
+  const getConfidence = (keypoints) => keypoints.reduce(
+    (sum, point) => sum + (point?.score ?? 1),
+    0
+  ) / keypoints.length;
+
+  const smoothGesture = (gesture) => {
+    const settings = settingsRef.current || {};
+    const windowSize = Math.max(1, settings.smoothingWindow ?? 4);
+    const history = gestureHistoryRef.current;
+    history.push(gesture);
+    if (history.length > windowSize) {
+      history.shift();
+    }
+
+    const counts = {};
+    let topGesture = null;
+    let topCount = 0;
+    history.forEach((entry) => {
+      if (!entry) return;
+      counts[entry] = (counts[entry] || 0) + 1;
+      if (counts[entry] > topCount) {
+        topCount = counts[entry];
+        topGesture = entry;
+      }
+    });
+
+    if (!topGesture) return null;
+    return topGesture;
+  };
+
+  const detectStaticGesture = (keypoints) => {
+    const thumbTip = keypoints[4];
+    const indexTip = keypoints[8];
+    const middleTip = keypoints[12];
+    const ringTip = keypoints[16];
+    const pinkyTip = keypoints[20];
+
+    const thumbExtended = thumbTip.y < keypoints[3].y;
+    const thumbDown = thumbTip.y > keypoints[3].y;
+    const indexExtended = indexTip.y < keypoints[6].y;
+    const middleExtended = middleTip.y < keypoints[10].y;
+    const ringExtended = ringTip.y < keypoints[14].y;
+    const pinkyExtended = pinkyTip.y < keypoints[18].y;
+
+    if (!thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+      return 'Closed_Fist';
+    }
+
+    if (thumbExtended && indexExtended && middleExtended && ringExtended && pinkyExtended) {
+      return 'Open_Palm';
+    }
+
+    if (thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+      return 'Thumb_Up';
+    }
+
+    if (thumbDown && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+      return 'Thumb_Down';
+    }
+
+    if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
+      return 'Victory';
+    }
+
+    if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+      return 'Pointing_Up';
+    }
+
+    return null;
+  };
+
+  const buildHologramPayload = (gesture, confidence = 0) => {
+    const settings = settingsRef.current || {};
+    const rotateStep = settings.rotateSensitivity ?? 0.02;
+    const zoomStep = settings.zoomSensitivity ?? 0.02;
+
+    if (!gesture) {
+      return {
+        rotateDelta: 0,
+        zoomDelta: 0,
+        pulse: 0,
+        activeGesture: null,
+        confidence: 0,
+      };
+    }
+
+    switch (gesture) {
+      case 'Rotate_CW':
+        return { rotateDelta: rotateStep, zoomDelta: 0, pulse: 0, activeGesture: gesture, confidence };
+      case 'Rotate_CCW':
+        return { rotateDelta: -rotateStep, zoomDelta: 0, pulse: 0, activeGesture: gesture, confidence };
+      case 'Swipe_Left':
+        return { rotateDelta: -rotateStep * 3, zoomDelta: 0, pulse: 0, activeGesture: gesture, confidence };
+      case 'Swipe_Right':
+        return { rotateDelta: rotateStep * 3, zoomDelta: 0, pulse: 0, activeGesture: gesture, confidence };
+      case 'Zoom_In':
+        return { rotateDelta: 0, zoomDelta: -zoomStep * 3, pulse: 0, activeGesture: gesture, confidence };
+      case 'Zoom_Out':
+        return { rotateDelta: 0, zoomDelta: zoomStep * 3, pulse: 0, activeGesture: gesture, confidence };
+      case 'Pinch':
+        return { rotateDelta: 0, zoomDelta: 0, pulse: 1, activeGesture: gesture, confidence };
+      default:
+        return { rotateDelta: 0, zoomDelta: 0, pulse: 0, activeGesture: gesture, confidence };
+    }
+  };
+
+  const resolveGesture = (hands) => {
+    const settings = settingsRef.current || {};
+    const now = performance.now();
+    if (!hands || hands.length === 0) {
+      gestureHistoryRef.current = [];
+      lastWristRef.current = null;
+      lastAngleRef.current = null;
+      lastTwoHandDistanceRef.current = null;
+      transientGestureRef.current = null;
+      return { gesture: null, confidence: 0 };
+    }
+
+    const confidenceThreshold = settings.confidenceThreshold ?? 0.6;
+    const handStates = hands.map((hand) => {
+      const keypoints = hand.keypoints;
+      const confidence = getConfidence(keypoints);
+      const size = getHandSize(keypoints);
+      const thumbTip = keypoints[4];
+      const indexTip = keypoints[8];
+      const wrist = keypoints[0];
+      const pinchDistance = distance(thumbTip, indexTip) / size;
+      const angle = Math.atan2(indexTip.y - thumbTip.y, indexTip.x - thumbTip.x);
+
+      return {
+        keypoints,
+        confidence,
+        size,
+        wrist,
+        angle,
+        indexTip,
+        pinchDistance,
+        staticGesture: detectStaticGesture(keypoints),
+      };
+    }).filter((state) => state.confidence >= confidenceThreshold);
+
+    if (handStates.length === 0) {
+      return { gesture: null, confidence: 0 };
+    }
+
+    let gesture = null;
+    let gestureConfidence = handStates[0].confidence;
+
+    if (handStates.length >= 2) {
+      const distanceNow = distance(handStates[0].indexTip, handStates[1].indexTip);
+      const lastDistance = lastTwoHandDistanceRef.current;
+      const averageSize = (handStates[0].size + handStates[1].size) / 2;
+      if (lastDistance) {
+        const delta = (distanceNow - lastDistance.distance) / averageSize;
+        if (Math.abs(delta) > (settings.zoomThreshold ?? 0.12)) {
+          gesture = delta > 0 ? 'Zoom_In' : 'Zoom_Out';
+          gestureConfidence = Math.min(handStates[0].confidence, handStates[1].confidence);
+        }
+      }
+      lastTwoHandDistanceRef.current = { distance: distanceNow, t: now };
+    }
+
+    if (!gesture) {
+      const angleState = lastAngleRef.current;
+      if (angleState) {
+        const delta = handStates[0].angle - angleState.angle;
+        const dt = now - angleState.t;
+        if (dt < 400 && Math.abs(delta) > (settings.rotateThreshold ?? 0.25)) {
+          gesture = delta > 0 ? 'Rotate_CCW' : 'Rotate_CW';
+        }
+      }
+      lastAngleRef.current = { angle: handStates[0].angle, t: now };
+    }
+
+    if (!gesture) {
+      const lastWrist = lastWristRef.current;
+      if (lastWrist) {
+        const dt = now - lastWrist.t;
+        const dx = handStates[0].wrist.x - lastWrist.x;
+        const dy = handStates[0].wrist.y - lastWrist.y;
+        if (dt > 40 && dt < 400 && Math.abs(dx) > (settings.swipeThreshold ?? 80) && Math.abs(dx) > Math.abs(dy)) {
+          gesture = dx > 0 ? 'Swipe_Right' : 'Swipe_Left';
+        }
+      }
+      lastWristRef.current = { x: handStates[0].wrist.x, y: handStates[0].wrist.y, t: now };
+    }
+
+    if (!gesture && handStates[0].pinchDistance < (settings.pinchThreshold ?? 0.25)) {
+      gesture = 'Pinch';
+    }
+
+    if (!gesture) {
+      gesture = handStates[0].staticGesture;
+    }
+
+    const transient = transientGestureRef.current;
+    if (gesture && ['Swipe_Left', 'Swipe_Right', 'Rotate_CW', 'Rotate_CCW', 'Zoom_In', 'Zoom_Out'].includes(gesture)) {
+      transientGestureRef.current = { gesture, expiresAt: now + 300 };
+    }
+
+    if (transient && now < transient.expiresAt) {
+      gesture = transient.gesture;
+    }
+
+    const smoothedGesture = smoothGesture(gesture);
+    return { gesture: smoothedGesture, confidence: gestureConfidence };
   };
 
   // Detection loop
@@ -178,29 +419,33 @@ export default function GestureControl() {
               ctx.lineTo(p2.x, p2.y);
               ctx.stroke();
             });
-
-            // Simple gesture detection (example)
-            const gesture = detectGesture(hand.keypoints);
-            if (gesture) {
-              setCurrentGesture(gesture);
-              setGestureDetected(gesture);
-
-              if (gesture !== lastGestureRef.current) {
-                lastGestureRef.current = gesture;
-                triggerDeviceAction(gesture);
-              }
-
-              ctx.fillStyle = '#00ff88';
-              ctx.font = '18px Arial';
-              ctx.fillText(GESTURES[gesture]?.label || gesture, 10, 30);
-            }
           });
+        }
 
-          if (hands.length === 0) {
-            setCurrentGesture(null);
-            setGestureDetected(null);
-            lastGestureRef.current = null;
+        const { gesture, confidence } = resolveGesture(hands);
+
+        if (gesture) {
+          setCurrentGesture(gesture);
+          setGestureDetected(gesture);
+
+          if (gesture !== lastGestureRef.current) {
+            lastGestureRef.current = gesture;
+            triggerDeviceAction(gesture);
           }
+
+          const payload = buildHologramPayload(gesture, confidence);
+          setHologramControl(payload);
+
+          if (ctx && canvasRef.current) {
+            ctx.fillStyle = '#00ff88';
+            ctx.font = '18px Arial';
+            ctx.fillText(GESTURES[gesture]?.label || gesture, 10, 30);
+          }
+        } else {
+          setCurrentGesture(null);
+          setGestureDetected(null);
+          lastGestureRef.current = null;
+          setHologramControl(buildHologramPayload(null, 0));
         }
       } catch (error) {
         console.error('Detection error:', error);
@@ -213,49 +458,6 @@ export default function GestureControl() {
     
     return () => cancelAnimationFrame(animationId);
   }, [isActive, detector]);
-
-  // Simple gesture detection logic
-  const detectGesture = (keypoints) => {
-    // This is a simplified example
-    // Real implementation would use proper gesture recognition
-    
-    const thumbTip = keypoints[4];
-    const indexTip = keypoints[8];
-    const middleTip = keypoints[12];
-    const ringTip = keypoints[16];
-    const pinkyTip = keypoints[20];
-    const wrist = keypoints[0];
-    
-    // Check if fingers are extended
-    const thumbExtended = thumbTip.y < keypoints[3].y;
-    const indexExtended = indexTip.y < keypoints[6].y;
-    const middleExtended = middleTip.y < keypoints[10].y;
-    const ringExtended = ringTip.y < keypoints[14].y;
-    const pinkyExtended = pinkyTip.y < keypoints[18].y;
-    
-    // Detect gestures
-    if (!thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
-      return 'Closed_Fist';
-    }
-    
-    if (thumbExtended && indexExtended && middleExtended && ringExtended && pinkyExtended) {
-      return 'Open_Palm';
-    }
-    
-    if (thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
-      return 'Thumb_Up';
-    }
-    
-    if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
-      return 'Victory';
-    }
-    
-    if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
-      return 'Pointing_Up';
-    }
-    
-    return null;
-  };
 
   return (
     <div className="glass p-6 rounded-2xl">

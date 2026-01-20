@@ -1,18 +1,35 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { useJarvisStore } from '../lib/store';
 
 export default function ThreeScene() {
   const canvasRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const controlRef = useRef({ rotateDelta: 0, zoomDelta: 0, pulse: 0, activeGesture: null, confidence: 0 });
+  const settingsRef = useRef({});
+  const zoomRef = useRef(8);
+
+  const { hologramControl, hologramSettings } = useJarvisStore();
+
+  useEffect(() => {
+    controlRef.current = hologramControl || controlRef.current;
+  }, [hologramControl]);
+
+  useEffect(() => {
+    if (hologramSettings) {
+      settingsRef.current = hologramSettings;
+      zoomRef.current = hologramSettings.baseZoom ?? zoomRef.current;
+    }
+  }, [hologramSettings]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     let animationId;
     let scene, camera, renderer;
-    let coreSphere, rings = [], particles = [], holograms = [];
+    let coreSphere, innerCore, rings = [], particles = [], holograms = [];
 
     try {
       // Dynamically import Three.js
@@ -23,8 +40,10 @@ export default function ThreeScene() {
         scene.fog = new THREE.FogExp2(0x000000, 0.0008);
 
         // Camera setup
+        const startZoom = settingsRef.current?.baseZoom ?? zoomRef.current ?? 8;
+        zoomRef.current = startZoom;
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 8);
+        camera.position.set(0, 2, startZoom);
         camera.lookAt(0, 0, 0);
 
         // Renderer setup
@@ -79,7 +98,7 @@ export default function ThreeScene() {
           emissive: 0xffffff,
           emissiveIntensity: 1
         });
-        const innerCore = new THREE.Mesh(innerCoreGeometry, innerCoreMaterial);
+        innerCore = new THREE.Mesh(innerCoreGeometry, innerCoreMaterial);
         coreSphere.add(innerCore);
 
         // Holographic rings
@@ -172,34 +191,55 @@ export default function ThreeScene() {
 
         // Animation loop
         const time = { value: 0 };
+        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
         const animate = () => {
           animationId = requestAnimationFrame(animate);
           time.value += 0.01;
 
+          const control = controlRef.current || {};
+          const settings = settingsRef.current || {};
+          const autoRotateSpeed = settings.autoRotate === false ? 0 : (settings.autoRotateSpeed ?? 0.004);
+
+          // Zoom control from gestures
+          const minZoom = settings.minZoom ?? 4;
+          const maxZoom = settings.maxZoom ?? 12;
+          if (control.zoomDelta) {
+            zoomRef.current = clamp(zoomRef.current + control.zoomDelta, minZoom, maxZoom);
+          }
+          camera.position.z = zoomRef.current;
+
           // Rotate core
           if (coreSphere) {
-            coreSphere.rotation.y += 0.005;
+            coreSphere.rotation.y += 0.005 + control.rotateDelta + autoRotateSpeed;
             coreSphere.rotation.x = Math.sin(time.value) * 0.1;
           }
 
           // Animate rings
           rings.forEach((ring, i) => {
-            ring.rotation.z += 0.01 * (i % 2 === 0 ? 1 : -1);
-            ring.rotation.y += 0.005;
-            const scale = 1 + Math.sin(time.value * 2 + i) * 0.1;
+            ring.rotation.z += (0.01 + autoRotateSpeed) * (i % 2 === 0 ? 1 : -1);
+            ring.rotation.y += 0.005 + control.rotateDelta * 0.5;
+            const scale = 1 + Math.sin(time.value * 2 + i) * 0.1 + (control.pulse ? 0.05 : 0);
             ring.scale.set(scale, scale, scale);
           });
 
           // Orbit nodes
           holograms.forEach((node, i) => {
-            const angle = (i / 8) * Math.PI * 2 + time.value * 0.5;
+            const angle = (i / 8) * Math.PI * 2 + time.value * 0.5 + control.rotateDelta * 20;
             const radius = 3 + Math.sin(time.value + i) * 0.5;
             node.position.x = Math.cos(angle) * radius;
             node.position.y = Math.sin(angle * 2) * 0.5;
             node.position.z = Math.sin(angle) * radius;
-            node.rotation.x += 0.02;
-            node.rotation.y += 0.03;
+            node.rotation.x += 0.02 + control.rotateDelta * 5;
+            node.rotation.y += 0.03 + control.rotateDelta * 5;
           });
+
+          if (innerCore) {
+            const pulseStrength = control.pulse ? 0.15 : 0.08;
+            const pulse = 1 + Math.sin(time.value * 3) * pulseStrength;
+            innerCore.scale.set(pulse, pulse, pulse);
+            innerCore.material.emissiveIntensity = 1 + (control.confidence ?? 0) * 0.5;
+          }
 
           // Animate particles
           if (particleSystem) {

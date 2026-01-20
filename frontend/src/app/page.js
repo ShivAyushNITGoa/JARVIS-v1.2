@@ -14,9 +14,11 @@ import DashboardPanel from '../components/DashboardPanel';
 import SearchWeatherPanel from '../components/SearchWeatherPanel';
 import MemoryPanel from '../components/MemoryPanel';
 import ControlStudioPanel from '../components/ControlStudioPanel';
+import AuthGate from '../components/AuthGate';
 
 import { useJarvisStore } from '../lib/store';
 import { jarvisAPI } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Dynamic import for Three.js (no SSR)
 const ThreeScene = dynamic(() => import('../components/ThreeScene'), {
@@ -25,6 +27,7 @@ const ThreeScene = dynamic(() => import('../components/ThreeScene'), {
 });
 
 export default function Home() {
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState('chat');
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -112,10 +115,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen relative">
-      {/* Background Effects */}
-      <div className="grid-bg" />
-      <div className="scan-line" />
+    <AuthGate>
+      <main className="min-h-screen relative">
+        {/* Background Effects */}
+        <div className="grid-bg" />
+        <div className="scan-line" />
 
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 glass">
@@ -182,7 +186,7 @@ export default function Home() {
 
             {/* Chat */}
             <div className="lg:col-span-2">
-              <ChatInterface />
+              <ChatInterface authToken={session?.access_token} />
             </div>
           </div>
         )}
@@ -220,7 +224,7 @@ export default function Home() {
 
         {/* Studio Tab */}
         {activeTab === 'studio' && (
-          <ControlStudioPanel isActive={activeTab === 'studio'} />
+          <ControlStudioPanel isActive={activeTab === 'studio'} authToken={session?.access_token} />
         )}
 
         {/* Settings Tab */}
@@ -326,5 +330,6 @@ export default function Home() {
         </div>
       )}
     </main>
+    </AuthGate>
   );
 }
