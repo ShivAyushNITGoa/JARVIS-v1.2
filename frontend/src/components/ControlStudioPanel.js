@@ -76,7 +76,8 @@ export default function ControlStudioPanel({ isActive = false, authToken = null 
   };
 
   const persistSettings = async (nextSettings) => {
-    setSyncState('saving');
+    console.log('authToken in persistSettings:', authToken);
+    setSyncState('syncing');
     setSyncError(null);
     const response = await jarvisAPI.updateAutomationSettings(nextSettings, authToken);
     if (!response.success) {
