@@ -5,13 +5,18 @@ export const metadata = {
   title: 'JARVIS - Advanced AI Assistant',
   description: 'AI Assistant with IoT Control, Face Recognition & 3D Interface',
   manifest: '/manifest.json',
-  themeColor: '#00d4ff',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'JARVIS',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#00d4ff',
 };
 
 export default function RootLayout({ children }) {
@@ -22,7 +27,6 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="#00d4ff" />
       </head>
       <body className="bg-jarvis-dark text-white antialiased">
         <AuthProvider>
