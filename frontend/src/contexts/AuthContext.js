@@ -8,6 +8,10 @@ const AuthContext = createContext({
   session: null,
   loading: true,
   signIn: async () => {},
+  signUp: async () => {},
+  signInWithPassword: async () => {},
+  signInWithOAuth: async () => {},
+  resetPassword: async () => {},
   signOut: async () => {},
 });
 
@@ -40,8 +44,45 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
+    });
+    if (error) throw error;
+  };
+
+  const signUp = async (email, password, options = {}) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: options.data || {},
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) throw error;
+  };
+
+  const signInWithPassword = async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+  };
+
+  const signInWithOAuth = async (provider) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) throw error;
+  };
+
+  const resetPassword = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
     });
     if (error) throw error;
   };
@@ -52,7 +93,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signInWithPassword, signInWithOAuth, resetPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );
