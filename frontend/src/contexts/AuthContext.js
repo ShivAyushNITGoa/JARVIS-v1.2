@@ -51,7 +51,8 @@ export function AuthProvider({ children }) {
   };
 
   const signUp = async (email, password, options = {}) => {
-    const { error } = await supabase.auth.signUp({
+    console.log('Signing up:', email);
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -59,7 +60,9 @@ export function AuthProvider({ children }) {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    console.log('Signup response:', { data, error });
     if (error) throw error;
+    return data;
   };
 
   const signInWithPassword = async (email, password) => {
@@ -71,20 +74,26 @@ export function AuthProvider({ children }) {
   };
 
   const signInWithOAuth = async (provider) => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    console.log('OAuth sign in with:', provider);
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    console.log('OAuth response:', { data, error });
     if (error) throw error;
+    return data;
   };
 
   const resetPassword = async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    console.log('Resetting password for:', email);
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
+    console.log('Reset password response:', { data, error });
     if (error) throw error;
+    return data;
   };
 
   const signOut = async () => {
