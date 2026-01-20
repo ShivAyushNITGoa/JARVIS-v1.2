@@ -210,8 +210,8 @@ export default function ControlStudioPanel({ isActive = false, authToken = null 
       if (!isActive) return;
       setSyncState('loading');
       setSyncError(null);
-      const settings = await jarvisAPI.getAutomationSettings();
-      const timeline = await jarvisAPI.getAutomationTimeline(80);
+      const settings = await jarvisAPI.getAutomationSettings(authToken);
+      const timeline = await jarvisAPI.getAutomationTimeline(80, authToken);
 
       if (!mounted) return;
 
@@ -236,7 +236,7 @@ export default function ControlStudioPanel({ isActive = false, authToken = null 
 
     const refreshTimeline = async () => {
       if (!isActive) return;
-      const timeline = await jarvisAPI.getAutomationTimeline(80);
+      const timeline = await jarvisAPI.getAutomationTimeline(80, authToken);
       if (!mounted) return;
       if (timeline.success) {
         setActivityTimeline(timeline.events || []);
@@ -245,7 +245,7 @@ export default function ControlStudioPanel({ isActive = false, authToken = null 
 
     const refreshSettings = async () => {
       if (!isActive) return;
-      const settings = await jarvisAPI.getAutomationSettings();
+      const settings = await jarvisAPI.getAutomationSettings(authToken);
       if (!mounted) return;
       if (settings.success && settings.settings) {
         setGestureMappings(settings.settings.gesture_mappings || gestureMappings);
